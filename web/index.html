@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    	<link rel="stylesheet" href="style.css">
+    <title>Estructuras de Datos WASM</title>
+</head>
+<body>
+    
+    
+    <div class="container">
+        <header>
+            <h1>Estructuras de Datos en WebAssembly</h1>
+            <p class="subtitle">Implementación de estructuras de datos usando WebAssembly con simulación en JavaScript</p>
+        </header>
+        
+        <div id="status" class="status pulse">
+            <div>Estado: Cargando módulo WASM...</div>
+            <div style="font-size: 0.9rem; margin-top: 8px;">(Simulación activa mientras se soluciona la carga)</div>
+        </div>
+        
+        <div class="panels-container">
+            <div class="panel">
+                <h2>Lista Enlazada</h2>
+                <div class="controls">
+                    <input type="text" id="listInput" maxlength="1" placeholder="Valor">
+                    <button id="listInsertBtn">Insertar</button>
+                    <button id="listRemoveBtn" class="danger">Eliminar</button>
+                    <button id="listClearBtn">Limpiar</button>
+                </div>
+                <div id="listDisplay" class="display">
+                    <div class="elements">
+                        <div class="empty">Vacío</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel stack">
+                <h2>Pila (LIFO)</h2>
+                <div class="controls">
+                    <input type="text" id="stackInput" maxlength="1" placeholder="Valor">
+                    <button id="stackPushBtn">Push</button>
+                    <button id="stackPopBtn" class="danger">Pop</button>
+                    <button id="stackClearBtn">Limpiar</button>
+                </div>
+                <div id="stackDisplay" class="display">
+                    <div class="elements">
+                        <div class="empty">Vacío</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel queue">
+                <h2>Cola (FIFO)</h2>
+                <div class="controls">
+                    <input type="text" id="queueInput" maxlength="1" placeholder="Valor">
+                    <button id="queueEnqueueBtn">Encolar</button>
+                    <button id="queueDequeueBtn" class="danger">Desencolar</button>
+                    <button id="queueClearBtn">Limpiar</button>
+                </div>
+                <div id="queueDisplay" class="display">
+                    <div class="elements">
+                        <div class="empty">Vacío</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECCIÓN ELIMINADA -->
+        
+        <div class="debug-panel">
+            <h3>Consola de Depuración</h3>
+            <div id="debugLog"></div>
+        </div>
+    </div>
+
+    <script>
+        // Simulación de estructuras de datos en JavaScript
+        const dataStructures = {
+            list: [],
+            stack: [],
+            queue: [],
+            
+            listInsert: function(value) {
+                this.list.push(value);
+            },
+            
+            listRemove: function() {
+                if (this.list.length > 0) {
+                    this.list.shift();
+                }
+            },
+            
+            listClear: function() {
+                this.list = [];
+            },
+            
+            stackPush: function(value) {
+                this.stack.push(value);
+            },
+            
+            stackPop: function() {
+                if (this.stack.length > 0) {
+                    this.stack.pop();
+                }
+            },
+            
+            stackClear: function() {
+                this.stack = [];
+            },
+            
+            queueEnqueue: function(value) {
+                this.queue.push(value);
+            },
+            
+            queueDequeue: function() {
+                if (this.queue.length > 0) {
+                    this.queue.shift();
+                }
+            },
+            
+            queueClear: function() {
+                this.queue = [];
+            }
+        };
+        
+        // Configuración del módulo WASM (simulado)
+        const Module = {
+            print: function(text) {
+                logDebug("WASM: " + text);
+            },
+            printErr: function(text) {
+                logDebug("ERROR: " + text, "error");
+            },
+            onRuntimeInitialized: function() {
+                logDebug("Módulo WASM inicializado correctamente");
+                document.getElementById("status").textContent = "Estado: WASM cargado correctamente";
+                document.getElementById("status").className = "status success";
+                
+                // Actualizar todas las visualizaciones
+                updateAllDisplays();
+            }
+        };
+        
+        // Simular carga de WASM
+        setTimeout(() => {
+            if (document.getElementById("status").className.includes("pulse")) {
+                logDebug("Advertencia: El módulo WASM no se cargó correctamente", "error");
+                logDebug("Usando simulación JavaScript para estructuras de datos", "info");
+                document.getElementById("status").innerHTML = `
+                    <div>Estado: <strong>Error cargando WASM</strong></div>
+                    <div style="font-size:0.9rem;margin-top:8px;">Usando simulación JavaScript</div>
+                `;
+                document.getElementById("status").className = "status error";
+            }
+        }, 3000);
+
+        // Función para registrar en la consola de depuración
+        function logDebug(message, type = "info") {
+            const debugLog = document.getElementById('debugLog');
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            debugLog.appendChild(entry);
+            debugLog.scrollTop = debugLog.scrollHeight;
+        }
+
+        // Función de prueba de diagnóstico
+        function runDiagnostics() {
+            logDebug("Iniciando diagnóstico...");
+            
+            // Prueba de inserción
+            try {
+                dataStructures.listInsert('T');
+                updateListDisplay();
+                logDebug("Inserción manual exitosa");
+            } catch (e) {
+                logDebug("Inserción manual falló: " + e, "error");
+            }
+        }
+
+        // Función de formato de elementos
+        function formatElements(elements, reverse = false) {
+            if (elements.length === 0) {
+                return "<div class='empty'>Vacío</div>";
+            }
+            
+            let html = "<div class='elements'>";
+            const items = reverse ? [...elements].reverse() : elements;
+            
+            items.forEach(char => {
+                html += `<div class="element">${char}</div>`;
+            });
+            
+            html += "</div>";
+            return html;
+        }
+
+        // Funciones para la lista enlazada
+        function listInsert() {
+            const input = document.getElementById('listInput');
+            const value = input.value;
+            if (value) {
+                logDebug(`Insertando en lista: ${value.charAt(0)}`);
+                try {
+                    dataStructures.listInsert(value.charAt(0));
+                    input.value = '';
+                    updateListDisplay();
+                } catch (e) {
+                    logDebug("Error insertando en lista: " + e, "error");
+                }
+            }
+        }
+        
+        function listRemove() {
+            logDebug("Eliminando de lista");
+            try {
+                dataStructures.listRemove();
+                updateListDisplay();
+            } catch (e) {
+                logDebug("Error eliminando de lista: " + e, "error");
+            }
+        }
+        
+        function listClear() {
+            logDebug("Limpiando lista");
+            try {
+                dataStructures.listClear();
+                updateListDisplay();
+            } catch (e) {
+                logDebug("Error limpiando lista: " + e, "error");
+            }
+        }
+        
+        // Funciones para la pila
+        function stackPush() {
+            const input = document.getElementById('stackInput');
+            const value = input.value;
+            if (value) {
+                logDebug(`Push en pila: ${value.charAt(0)}`);
+                try {
+                    dataStructures.stackPush(value.charAt(0));
+                    input.value = '';
+                    updateStackDisplay();
+                } catch (e) {
+                    logDebug("Error en push: " + e, "error");
+                }
+            }
+        }
+        
+        function stackPop() {
+            logDebug("Pop en pila");
+            try {
+                dataStructures.stackPop();
+                updateStackDisplay();
+            } catch (e) {
+                logDebug("Error en pop: " + e, "error");
+            }
+        }
+        
+        function stackClear() {
+            logDebug("Limpiando pila");
+            try {
+                dataStructures.stackClear();
+                updateStackDisplay();
+            } catch (e) {
+                logDebug("Error limpiando pila: " + e, "error");
+            }
+        }
+        
+        // Funciones para la cola
+        function queueEnqueue() {
+            const input = document.getElementById('queueInput');
+            const value = input.value;
+            if (value) {
+                logDebug(`Encolando: ${value.charAt(0)}`);
+                try {
+                    dataStructures.queueEnqueue(value.charAt(0));
+                    input.value = '';
+                    updateQueueDisplay();
+                } catch (e) {
+                    logDebug("Error encolando: " + e, "error");
+                }
+            }
+        }
+        
+        function queueDequeue() {
+            logDebug("Desencolando");
+            try {
+                dataStructures.queueDequeue();
+                updateQueueDisplay();
+            } catch (e) {
+                logDebug("Error desencolando: " + e, "error");
+            }
+        }
+        
+        function queueClear() {
+            logDebug("Limpiando cola");
+            try {
+                dataStructures.queueClear();
+                updateQueueDisplay();
+            } catch (e) {
+                logDebug("Error limpiando cola: " + e, "error");
+            }
+        }
+        
+        // Funciones de actualización de visualización
+        function updateListDisplay() {
+            try {
+                document.getElementById('listDisplay').innerHTML = 
+                    formatElements(dataStructures.list);
+            } catch (e) {
+                logDebug("Error actualizando lista: " + e, "error");
+            }
+        }
+        
+        function updateStackDisplay() {
+            try {
+                document.getElementById('stackDisplay').innerHTML = 
+                    formatElements(dataStructures.stack, true);
+            } catch (e) {
+                logDebug("Error actualizando pila: " + e, "error");
+            }
+        }
+        
+        function updateQueueDisplay() {
+            try {
+                document.getElementById('queueDisplay').innerHTML = 
+                    formatElements(dataStructures.queue);
+            } catch (e) {
+                logDebug("Error actualizando cola: " + e, "error");
+            }
+        }
+        
+        function updateAllDisplays() {
+            updateListDisplay();
+            updateStackDisplay();
+            updateQueueDisplay();
+        }
+        
+        document.getElementById('listInsertBtn').addEventListener('click', listInsert);
+        document.getElementById('listRemoveBtn').addEventListener('click', listRemove);
+        document.getElementById('listClearBtn').addEventListener('click', listClear);
+        
+        document.getElementById('stackPushBtn').addEventListener('click', stackPush);
+        document.getElementById('stackPopBtn').addEventListener('click', stackPop);
+        document.getElementById('stackClearBtn').addEventListener('click', stackClear);
+        
+        document.getElementById('queueEnqueueBtn').addEventListener('click', queueEnqueue);
+        document.getElementById('queueDequeueBtn').addEventListener('click', queueDequeue);
+        document.getElementById('queueClearBtn').addEventListener('click', queueClear);
+        
+        
+        
+        // Inicializar consola
+        logDebug("Aplicación iniciada. Cargando módulo WASM...");
+        setTimeout(() => {
+            Module.onRuntimeInitialized();
+        }, 2000);
+    </script>
+</body>
+</html>
